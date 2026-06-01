@@ -1,37 +1,203 @@
 # Sinkhorn-CPD
 
-Official implementation of **Sinkhorn-CPD: Robust Point Cloud Registration via Unbalanced Entropic Optimal Transport**.
+Official implementation of the paper:
+
+> **Sinkhorn-CPD: Robust Point Cloud Registration via Unbalanced Entropic Optimal Transport**
+>
+> Published in *Computer-Aided Design* (VSI: SPM 2026)
 
 ## Overview
 
-Sinkhorn-CPD is a robust point cloud registration method that formulates rigid alignment as an unbalanced entropic optimal transport problem. By introducing dual KL-divergence penalties on both source and target marginals, it enables symmetric outlier rejection while preserving the automatic variance annealing of CPD.
+Sinkhorn-CPD formulates rigid point cloud registration as an **unbalanced entropic optimal transport** problem. It couples CPD's EM structure with a dual-KL-relaxed Sinkhorn solver, enabling symmetric outlier rejection on both source and target sides while preserving automatic variance annealing.
 
-### Key Features
+**Key features:**
+- Dual-KL marginal relaxation for two-sided outlier robustness
+- Adaptive $\sigma^2$ annealing that tracks alignment residuals, preventing premature convergence
+- A single hyperparameter ($\tau=1$) works across all settings without retuning
+- GPU-accelerated PyTorch implementation (~100 lines core algorithm)
 
-- **Dual-KL unbalanced formulation** — simultaneously rejects outliers on both source and target sides
-- **Adaptive variance annealing** — kernel scale tracks alignment residuals, preventing premature convergence
-- **Single hyperparameter** — works with $\tau=1$ across all experimental settings without retuning
-- **GPU-accelerated** — implemented in PyTorch (~400 lines)
+## Repository Structure
 
-## Requirements
+```
+SinkhornCPD/
+├── sinkhorn_cpd.py          # Core algorithm
+├── metrics.py               # RE, TE, RMSE, Chamfer distance
+├── baselines/               # Unified wrappers for 8 baseline methods
+│   ├── cpd.py               #   CPD (via probreg)
+│   ├── filterreg.py         #   FilterReg (via probreg)
+│   ├── fgr.py               #   Fast Global Registration (Open3D)
+│   ├── rpot.py              #   RPOT (PyTorch re-implementation)
+│   ├── robot.py             #   RobOT (via geomloss)
+│   ├── teaser.py            #   TEASER++ (C++ with Python binding)
+│   ├── sparseicp.py         #   Sparse-ICP (C++ with Python binding)
+│   └── lsgcpd.py            #   LSG-CPD (MATLAB engine)
+├── datasets/
+│   ├── bunny.ply            # Stanford Bunny source mesh
+│   ├── bunny_synth.py       # Bunny loader + perturbation generator
+│   ├── synth/               # Pre-generated Bunny benchmark (20 trials per level)
+│   └── modelnet/            # ModelNet40 test pairs (download separately)
+├── experiments/
+│   ├── bunny.py             # Bunny single-factor robustness sweeps
+│   └── modelnet.py          # ModelNet40 cross-category evaluation
+├── analysis/                # Scripts for aggregating result tables
+├── results/                 # Pre-computed CSV results for all methods
+│   ├── bunny/{noise,outlier,overlap,rotation}/<Method>.csv
+│   └── modelnet/<Method>.csv
+├── third_party/             # Vendored baselines (LSG-CPD, RPOT sources)
+├── run_all_bunny.sh         # Run all baselines on Bunny
+└── run_modelnet_all.sh      # Run all baselines on ModelNet40
+```
 
-- Python 3.8+
-- PyTorch 1.10+
-- NumPy, SciPy
+## Installation
+
+```bash
+conda create -n sinkhorn-cpd python=3.10 && conda activate sinkhorn-cpd
+pip install -r requirements.txt && pip install -e .
+```
+
+Baseline methods load lazily; any with a missing backend is skipped at runtime.
+
+| Baseline | Setup |
+|---|---|
+| CPD, FilterReg, FGR, RPOT | Bundled via `requirements.txt` |
+| RobOT | `pip install geomloss pykeops` |
+| Sparse-ICP | Clone [OpenGP/sparseicp](https://github.com/OpenGP/sparseicp) into `third_party/sparseicp/` and CMake-build |
+| TEASER++ | Clone [MIT-SPARK/TEASER-plusplus](https://github.com/MIT-SPARK/TEASER-plusplus) into `third_party/TEASER-plusplus/` and CMake-build with Python bindings |
+| LSG-CPD | MATLAB >= R2021a + `matlab.engine`; sources vendored at `third_party/LSG-CPD/` |
+
+## Data
+
+**Bunny benchmark** (`datasets/synth/`, ~35 MB) ships with this repo.
+
+**ModelNet40 test pairs** (`datasets/modelnet/data.npz`, 227 MB) are excluded due to GitHub's file size limit. Download and place at `datasets/modelnet/data.npz`:
+
+> Download link: [Google Drive](https://drive.google.com/file/d/18714vaIkd3HoQXDNwe_jKdlP_zZ82Mw7/view?usp=sharing)
+
+See [`datasets/README.md`](datasets/README.md) for data format details and regeneration instructions.
 
 ## Usage
 
-```python
-from sinkhorn_cpd import SinkhornCPD
+### Quick Start
 
-model = SinkhornCPD()
-T = model.register(source, target)
+```python
+from sinkhorn_cpd import sinkhorn_cpd
+
+R, t, sigma2_history = sinkhorn_cpd(
+    source, target,           # (M,3), (N,3) — source @ R.T + t ≈ target
+    tau_x=1.0, tau_y=1.0,     # KL marginal weights
+    L=20, max_iter=50, tol=1e-5,
+)
 ```
+
+### Run Experiments
+
+```bash
+# Stanford Bunny — single-factor robustness sweeps
+python -m experiments.bunny --axis noise --method SinkhornCPD
+python -m experiments.bunny --axis noise --method all
+bash run_all_bunny.sh          # all methods × all axes
+
+# ModelNet40 — 2148 cross-category test pairs
+python -m experiments.modelnet --method SinkhornCPD
+bash run_modelnet_all.sh       # all methods
+
+# Aggregate result tables
+python -m analysis.bunny_full_table    # → results/bunny_full_table.txt
+python -m analysis.modelnet_summary    # → results/modelnet_summary.txt
+```
+
+Per-pair logs are saved to `results/{bunny/<axis>,modelnet}/<Method>.csv` with columns: `rre` (deg), `rte`, `rmse`, `time` (s).
+
+## Results
+
+Pre-computed results are in `results/`. Below are key tables from the paper.
+
+### Bunny — Mean RE (°), 20 trials per level
+
+<details>
+<summary><b>Noise</b> (σ = 0.01 – 0.05)</summary>
+
+| σ | TEASER++ | FGR | Sparse-ICP | CPD | FilterReg | LSG-CPD | RPOT | RobOT | Ours(0.1) | Ours(1.0) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0.01 | 0.92 | 1.76 | 28.22 | 0.09 | 0.07 | 12.80 | 0.09 | 5.82 | 0.07 | **0.06** |
+| 0.02 | 1.66 | 13.00 | 27.93 | 0.33 | 0.27 | 7.63 | 0.57 | 5.89 | 0.21 | **0.20** |
+| 0.03 | 3.57 | 80.86 | 27.62 | 0.56 | 0.63 | 7.57 | 1.09 | 5.99 | **0.35** | 0.37 |
+| 0.04 | 9.89 | 42.84 | 27.36 | 0.82 | 1.07 | 10.15 | 1.71 | 6.12 | **0.51** | 0.56 |
+| 0.05 | 47.24 | 32.48 | 27.54 | 1.14 | 1.49 | 10.90 | 3.20 | 6.27 | **0.71** | 0.78 |
+
+</details>
+
+<details>
+<summary><b>Outlier</b> (r = 0.1 – 0.7)</summary>
+
+| r | TEASER++ | FGR | Sparse-ICP | CPD | FilterReg | LSG-CPD | RPOT | RobOT | Ours(0.1) | Ours(1.0) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0.1 | 1.33 | 10.54 | 28.54 | **0.15** | 0.28 | 7.94 | 0.49 | 4.85 | 0.19 | 0.18 |
+| 0.2 | 1.62 | 15.59 | 27.93 | 0.33 | 0.27 | 7.63 | 0.57 | 5.89 | 0.21 | **0.20** |
+| 0.3 | 1.79 | 25.10 | 29.92 | 12.10 | 0.29 | 6.30 | 0.62 | 6.89 | 0.23 | **0.22** |
+| 0.4 | 3.18 | 36.34 | 28.71 | 14.08 | 0.34 | 5.20 | 1.02 | 7.70 | 0.26 | **0.22** |
+| 0.5 | 4.03 | 44.86 | 29.27 | 15.03 | 0.46 | 5.38 | 1.40 | 8.82 | 0.26 | **0.25** |
+| 0.6 | 14.31 | 72.80 | 27.99 | 20.15 | 0.55 | 5.34 | 2.58 | 12.95 | **0.28** | **0.28** |
+| 0.7 | 27.06 | 66.48 | 28.52 | 23.46 | 0.58 | 3.80 | 3.22 | 14.76 | **0.40** | 0.47 |
+
+</details>
+
+<details>
+<summary><b>Overlap</b> (o = 0.4 – 0.9)</summary>
+
+| o | TEASER++ | FGR | Sparse-ICP | CPD | FilterReg | LSG-CPD | RPOT | RobOT | Ours(0.1) | Ours(1.0) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0.4 | **5.16** | 40.82 | 31.48 | 32.51 | 57.84 | 12.80 | 25.90 | 39.28 | 11.66 | 31.51 |
+| 0.5 | **3.14** | 30.69 | 29.96 | 25.00 | 40.70 | 9.64 | 13.39 | 36.84 | 5.47 | 9.23 |
+| 0.6 | 2.22 | 26.25 | 28.67 | 14.73 | 25.40 | 8.74 | 6.25 | 24.47 | **0.84** | 1.09 |
+| 0.7 | 2.14 | 15.10 | 28.89 | 7.35 | 7.95 | 8.59 | 2.99 | 16.40 | 0.30 | **0.28** |
+| 0.8 | 1.59 | 12.51 | 29.81 | 2.07 | 0.52 | 7.91 | 1.21 | 9.94 | 0.23 | **0.20** |
+| 0.9 | 1.65 | 13.08 | 27.93 | 0.33 | 0.27 | 7.63 | 0.57 | 5.89 | 0.21 | **0.20** |
+
+</details>
+
+<details>
+<summary><b>Rotation</b> (θ = 10° – 90°)</summary>
+
+| θ° | TEASER++ | FGR | Sparse-ICP | CPD | FilterReg | LSG-CPD | RPOT | RobOT | Ours(0.1) | Ours(1.0) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 10 | 0.93 | 9.05 | 13.27 | 0.29 | 0.31 | 0.40 | 0.52 | 5.84 | 0.21 | **0.20** |
+| 20 | 1.46 | 10.94 | 21.39 | 0.30 | 0.28 | 1.63 | 0.52 | 5.87 | 0.21 | **0.20** |
+| 30 | 1.72 | 12.93 | 27.93 | 0.33 | 0.26 | 7.63 | 0.57 | 5.89 | 0.21 | **0.20** |
+| 40 | 1.88 | 18.07 | 36.01 | 0.37 | 0.32 | 16.42 | 4.92 | 5.91 | 0.21 | **0.20** |
+| 50 | 2.51 | 20.65 | 46.83 | 0.45 | 0.28 | 29.55 | 24.60 | 5.94 | 0.22 | **0.20** |
+| 60 | 2.26 | 16.68 | 59.60 | 0.61 | 0.32 | 39.98 | 39.79 | 5.99 | 0.33 | **0.20** |
+| 70 | 10.77 | 30.58 | 71.04 | 0.96 | 4.19 | 52.62 | 55.79 | 6.12 | 1.06 | **0.24** |
+| 80 | 21.33 | 31.00 | 80.14 | 1.92 | 18.90 | 67.01 | 70.85 | 6.56 | 6.70 | **0.75** |
+| 90 | **22.46** | 47.67 | 89.29 | 26.56 | 29.94 | 83.90 | 85.98 | 41.32 | 52.24 | 37.68 |
+
+</details>
+
+### ModelNet40 — 2148 cross-category test pairs
+
+| Method | RE (°) | TE (×10³) | RMSE (×10³) | RR (%) | Time (s) |
+|---|---|---|---|---|---|
+| TEASER++ | 3.70 | 23.3 | 21.7 | 60.6 | **0.07** |
+| FGR | 5.58 | 44.7 | 45.7 | 18.0 | 0.08 |
+| Sparse-ICP | 18.58 | 253.2 | 268.3 | 1.0 | 0.11 |
+| CPD | 1.73 | 28.6 | 30.0 | 59.9 | 3.03 |
+| FilterReg | 1.29 | 16.4 | 16.6 | 85.5 | 0.12 |
+| LSG-CPD | 8.14 | 134.8 | 147.2 | 28.8 | 0.15 |
+| RPOT | 2.81 | 33.7 | 40.1 | 71.6 | 1.03 |
+| RobOT | 5.67 | 87.4 | 93.4 | 5.9 | 0.53 |
+| **Sinkhorn-CPD** | **0.64** | **13.5** | **14.3** | **88.9** | 0.53 |
 
 ## Citation
 
-Paper under review. Citation info will be added upon publication.
+```bibtex
+@article{sinkhorncpd2026,
+  title     = {Sinkhorn-CPD: Robust Point Cloud Registration via Unbalanced Entropic Optimal Transport},
+  journal   = {Computer-Aided Design},
+  year      = {2026},
+  note      = {VSI: SPM 2026},
+}
+```
 
 ## License
 
-MIT
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

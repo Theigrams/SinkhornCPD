@@ -1,0 +1,23 @@
+# Large data files (download separately, see README)
+datasets/modelnet/data.npz
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Logs / caches
+*.log
+.pytest_cache/
+.ipynb_checkpoints/

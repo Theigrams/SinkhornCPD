@@ -1,0 +1,12 @@
+# Pinned versions used for paper reproduction.
+# Match the conda 'pcd' environment.
+numpy
+torch
+pandas
+scipy
+tqdm
+matplotlib
+open3d==0.17.0
+probreg==0.3.8
+cupy-cuda12x       # CPD GPU backend via probreg
+geomloss           # RobOT wrapper (unbalanced Sinkhorn divergence)
