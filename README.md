@@ -4,7 +4,13 @@ Official implementation of the paper:
 
 > **Sinkhorn-CPD: Robust Point Cloud Registration via Unbalanced Entropic Optimal Transport**
 >
+> Jin Zhang, Mingyang Zhao, Bing Liu, Xin Jiang
+>
 > Published in *Computer-Aided Design* (VSI: SPM 2026)
+
+<p align="center">
+  <img src="assets/teaser.png" width="100%">
+</p>
 
 ## Overview
 
