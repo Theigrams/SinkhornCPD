@@ -196,8 +196,9 @@ Pre-computed results are in `results/`. Below are key tables from the paper.
 ## Citation
 
 ```bibtex
-@article{sinkhorncpd2026,
+@article{zhang2026sinkhorncpd,
   title     = {Sinkhorn-CPD: Robust Point Cloud Registration via Unbalanced Entropic Optimal Transport},
+  author    = {Zhang, Jin and Zhao, Mingyang and Liu, Bing and Jiang, Xin},
   journal   = {Computer-Aided Design},
   year      = {2026},
   note      = {VSI: SPM 2026},
