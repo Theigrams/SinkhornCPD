@@ -75,9 +75,12 @@ Baseline methods load lazily; any with a missing backend is skipped at runtime.
 
 **Bunny benchmark** (`datasets/synth/`, ~35 MB) ships with this repo.
 
-**ModelNet40 test pairs** (`datasets/modelnet/data.npz`, 227 MB) are excluded due to GitHub's file size limit. Download and place at `datasets/modelnet/data.npz`:
+**ModelNet40 test pairs** (`datasets/modelnet/data.npz`, 227 MB) are excluded due to GitHub's file size limit. Download from the [GitHub Release](https://github.com/Theigrams/SinkhornCPD/releases/tag/v1.0) and place at `datasets/modelnet/data.npz`:
 
-> Download link: [Google Drive](https://drive.google.com/file/d/18714vaIkd3HoQXDNwe_jKdlP_zZ82Mw7/view?usp=sharing)
+```bash
+# Or download via CLI:
+gh release download v1.0 --pattern 'data.npz' --dir datasets/modelnet/
+```
 
 See [`datasets/README.md`](datasets/README.md) for data format details and regeneration instructions.
 
