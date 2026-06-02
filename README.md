@@ -1,4 +1,4 @@
-# Sinkhorn-CPD
+# Sinkhorn-CPD (CAD 2026)
 
 [![DOI](https://img.shields.io/badge/DOI-10.1016%2Fj.cad.2026.104104-blue)](https://doi.org/10.1016/j.cad.2026.104104)
 
@@ -16,13 +16,71 @@ Official implementation of the paper:
 
 ## Overview
 
-Sinkhorn-CPD formulates rigid point cloud registration as an **unbalanced entropic optimal transport** problem. It couples CPD's EM structure with a dual-KL-relaxed Sinkhorn solver, enabling symmetric outlier rejection on both source and target sides while preserving automatic variance annealing.
+**CPD's E-step *is* entropic OT — with one marginal dropped:**
+$$
+\begin{aligned}
+\textbf{CPD E-step:}\quad & \min_{P\ge0}\ \langle \mathbf{C},P\rangle + \mathcal{H}(P)
+  && \text{s.t.}\ \ \phantom{\Gamma\mathbf{1}=\mathbf{b}\ (\text{source}),\ \ } P^{\!\top}\mathbf{1}=\mathbf{1}\ \ (\text{target only}) \\
+\textbf{Entropic OT:}\quad & \min_{\Gamma\ge0}\ \langle \mathbf{C},\Gamma\rangle + \mathcal{H}(\Gamma)
+  && \text{s.t.}\ \ \Gamma\mathbf{1}=\mathbf{b}\ (\text{source}),\ \ \Gamma^{\!\top}\mathbf{1}=\mathbf{a}\ \ (\text{target})
+\end{aligned}
+$$
 
-**Key features:**
-- Dual-KL marginal relaxation for two-sided outlier robustness
-- Adaptive $\sigma^2$ annealing that tracks alignment residuals, preventing premature convergence
-- A single hyperparameter ($\tau=1$) works across all settings without retuning
-- GPU-accelerated PyTorch implementation (~100 lines core algorithm)
+$$
+C_{mn} = \frac{\lVert x_n - T(y_m)\rVert^2}{2\sigma^2} + \frac{D}{2}\log(2\pi\sigma^2)
+$$
+
+CPD keeps only the target marginal. **Sinkhorn-CPD relaxes *both* marginals to soft KL penalties**, on the same $\sigma^2$-normalized cost:
+
+$$
+\min_{\Gamma\ge0}\ \langle \mathbf{C},\Gamma\rangle + \mathcal{H}(\Gamma)
++ \tau_x\,\mathrm{KL}\!\left(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a}\right)
++ \tau_y\,\mathrm{KL}\!\left(\Gamma\mathbf{1}\,\Vert\,\mathbf{b}\right)
+$$
+
+### vs. prior OT-based registration
+
+**RobOT** [1]:
+
+$$
+\min_{\Gamma\ge0}\ \big\langle \tfrac12\lVert x_n-T(y_m)\rVert^2,\,\Gamma\big\rangle
++ \varepsilon\,\mathcal{H}(\Gamma)
++ \rho\,\mathrm{KL}(\Gamma\mathbf{1}\,\Vert\,\mathbf{b})
++ \rho\,\mathrm{KL}(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a})
+$$
+
+**RPOT** [2]:
+
+$$
+\min_{\Gamma\ge0}\ \big\langle \lVert x_n-T(y_m)\rVert^2,\,\Gamma\big\rangle
++ \varepsilon\,\mathcal{H}(\Gamma),
+\qquad
+\Gamma\mathbf{1}\le\mathbf{b},\ \ \Gamma^{\!\top}\mathbf{1}\le\mathbf{a},\ \ \langle\Gamma,\mathbf{1}\rangle=\beta_m
+$$
+
+**Sinkhorn-CPD** (ours):
+
+$$
+\min_{\Gamma\ge0}\ \Big\langle \tfrac{\lVert x_n-T(y_m)\rVert^2}{2\sigma^2}+\tfrac{D}{2}\log(2\pi\sigma^2),\,\Gamma\Big\rangle
++ \mathcal{H}(\Gamma)
++ \tau_x\,\mathrm{KL}(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a})
++ \tau_y\,\mathrm{KL}(\Gamma\mathbf{1}\,\Vert\,\mathbf{b})
+$$
+
+| Method | Cost $\mathbf{C}$ | Entropy weight | Marginals |
+|---|---|:---:|---|
+| **RobOT** [1] | $\tfrac12\lVert x-T(y)\rVert^2$ | fixed $\varepsilon$ | dual-KL, fixed $\rho$ |
+| **RPOT** [2] | $\lVert x-T(y)\rVert^2$ | decaying, $\varepsilon\!\leftarrow\!0.9\varepsilon$ | hard partial, mass $=\beta_m$ |
+| **Sinkhorn-CPD** | $\lVert x-T(y)\rVert^2/2\sigma^2$ | fixed $=1$, adaptive via $\sigma^2$ | dual-KL, fixed $\tau$ |
+
+> [1] Shen et al. *Accurate Point Cloud Registration with Robust Optimal Transport.* NeurIPS 2021, 5373–5389.
+> [2] Qin et al. *Rigid Registration of Point Clouds Based on Partial Optimal Transport.* Computer Graphics Forum 41(6):365–378, 2022. [doi:10.1111/cgf.14614](https://doi.org/10.1111/cgf.14614)
+
+**Highlights:**
+- **Two-sided outlier robustness** — dual-KL relaxation rejects clutter on source *and* target
+- **Self-tuning annealing** — adaptive $\sigma^2$ keeps the OT regularization in scale, no schedules
+- **One knob, never retuned** — $\tau=1$ across all noise / outlier / overlap / rotation settings
+- **Fast & tiny** — GPU PyTorch, ~100-line core algorithm
 
 ## Repository Structure
 
