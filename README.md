@@ -17,14 +17,8 @@ Official implementation of the paper:
 ## Overview
 
 **CPD's E-step *is* entropic OT — with one marginal dropped:**
-$$
-\begin{aligned}
-\textbf{CPD E-step:}\quad & \min_{P\ge0}\ \langle \mathbf{C},P\rangle + \mathcal{H}(P)
-  && \text{s.t.}\ \ \phantom{\Gamma\mathbf{1}=\mathbf{b}\ (\text{source}),\ \ } P^{\!\top}\mathbf{1}=\mathbf{1}\ \ (\text{target only}) \\
-\textbf{Entropic OT:}\quad & \min_{\Gamma\ge0}\ \langle \mathbf{C},\Gamma\rangle + \mathcal{H}(\Gamma)
-  && \text{s.t.}\ \ \Gamma\mathbf{1}=\mathbf{b}\ (\text{source}),\ \ \Gamma^{\!\top}\mathbf{1}=\mathbf{a}\ \ (\text{target})
-\end{aligned}
-$$
+
+$$\begin{aligned} \textbf{CPD E-step:}\quad & \min_{P\ge0}\ \langle \mathbf{C},P\rangle + \mathcal{H}(P) && \text{s.t.}\ \ \phantom{\Gamma\mathbf{1}=\mathbf{b}\ (\text{source}),\ \ } P^{\!\top}\mathbf{1}=\mathbf{1}\ \ (\text{target only}) \\ \textbf{Entropic OT:}\quad & \min_{\Gamma\ge0}\ \langle \mathbf{C},\Gamma\rangle + \mathcal{H}(\Gamma) && \text{s.t.}\ \ \Gamma\mathbf{1}=\mathbf{b}\ (\text{source}),\ \ \Gamma^{\!\top}\mathbf{1}=\mathbf{a}\ \ (\text{target}) \end{aligned}$$
 
 $$
 C_{mn} = \frac{\lVert x_n - T(y_m)\rVert^2}{2\sigma^2} + \frac{D}{2}\log(2\pi\sigma^2)
@@ -32,40 +26,21 @@ $$
 
 CPD keeps only the target marginal. **Sinkhorn-CPD relaxes *both* marginals to soft KL penalties**, on the same $\sigma^2$-normalized cost:
 
-$$
-\min_{\Gamma\ge0}\ \langle \mathbf{C},\Gamma\rangle + \mathcal{H}(\Gamma)
-+ \tau_x\,\mathrm{KL}\!\left(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a}\right)
-+ \tau_y\,\mathrm{KL}\!\left(\Gamma\mathbf{1}\,\Vert\,\mathbf{b}\right)
-$$
+$$\min_{\Gamma\ge0}\ \langle \mathbf{C},\Gamma\rangle + \mathcal{H}(\Gamma) + \tau_x\,\mathrm{KL}\!\left(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a}\right) + \tau_y\,\mathrm{KL}\!\left(\Gamma\mathbf{1}\,\Vert\,\mathbf{b}\right)$$
 
 ### vs. prior OT-based registration
 
 **RobOT** [1]:
 
-$$
-\min_{\Gamma\ge0}\ \big\langle \tfrac12\lVert x_n-T(y_m)\rVert^2,\,\Gamma\big\rangle
-+ \varepsilon\,\mathcal{H}(\Gamma)
-+ \rho\,\mathrm{KL}(\Gamma\mathbf{1}\,\Vert\,\mathbf{b})
-+ \rho\,\mathrm{KL}(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a})
-$$
+$$\min_{\Gamma\ge0}\ \big\langle \tfrac12\lVert x_n-T(y_m)\rVert^2,\,\Gamma\big\rangle + \varepsilon\,\mathcal{H}(\Gamma) + \rho\,\mathrm{KL}(\Gamma\mathbf{1}\,\Vert\,\mathbf{b}) + \rho\,\mathrm{KL}(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a})$$
 
 **RPOT** [2]:
 
-$$
-\min_{\Gamma\ge0}\ \big\langle \lVert x_n-T(y_m)\rVert^2,\,\Gamma\big\rangle
-+ \varepsilon\,\mathcal{H}(\Gamma),
-\qquad
-\Gamma\mathbf{1}\le\mathbf{b},\ \ \Gamma^{\!\top}\mathbf{1}\le\mathbf{a},\ \ \langle\Gamma,\mathbf{1}\rangle=\beta_m
-$$
+$$\min_{\Gamma\ge0}\ \big\langle \lVert x_n-T(y_m)\rVert^2,\,\Gamma\big\rangle + \varepsilon\,\mathcal{H}(\Gamma), \qquad \Gamma\mathbf{1}\le\mathbf{b},\ \ \Gamma^{\!\top}\mathbf{1}\le\mathbf{a},\ \ \langle\Gamma,\mathbf{1}\rangle=\beta_m$$
 
 **Sinkhorn-CPD** (ours):
 
-$$
-\min_{\Gamma\ge0}\ \Big\langle \tfrac{\lVert x_n-T(y_m)\rVert^2}{2\sigma^2}+\tfrac{D}{2}\log(2\pi\sigma^2),\,\Gamma\Big\rangle
-+ \mathcal{H}(\Gamma)
-+ \tau_x\,\mathrm{KL}(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a})
-+ \tau_y\,\mathrm{KL}(\Gamma\mathbf{1}\,\Vert\,\mathbf{b})
-$$
+$$\min_{\Gamma\ge0}\ \Big\langle \tfrac{\lVert x_n-T(y_m)\rVert^2}{2\sigma^2}+\tfrac{D}{2}\log(2\pi\sigma^2),\,\Gamma\Big\rangle + \mathcal{H}(\Gamma) + \tau_x\,\mathrm{KL}(\Gamma^{\!\top}\mathbf{1}\,\Vert\,\mathbf{a}) + \tau_y\,\mathrm{KL}(\Gamma\mathbf{1}\,\Vert\,\mathbf{b})$$
 
 | Method | Cost $\mathbf{C}$ | Entropy weight | Marginals |
 |---|---|:---:|---|
