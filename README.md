@@ -51,6 +51,7 @@ $$\min_{\Gamma\ge0}\ \Big\langle \tfrac{\lVert x_n-T(y_m)\rVert^2}{2\sigma^2}+\t
 | **Sinkhorn-CPD** | $\lVert x-T(y)\rVert^2/2\sigma^2$ | fixed $=1$, adaptive via $\sigma^2$ | dual-KL, fixed $\tau$ |
 
 > [1] Shen et al. *Accurate Point Cloud Registration with Robust Optimal Transport.* NeurIPS 2021, 5373–5389.
+>
 > [2] Qin et al. *Rigid Registration of Point Clouds Based on Partial Optimal Transport.* Computer Graphics Forum 41(6):365–378, 2022. [doi:10.1111/cgf.14614](https://doi.org/10.1111/cgf.14614)
 
 **Highlights:**
