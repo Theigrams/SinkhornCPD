@@ -1,12 +1,14 @@
 # Sinkhorn-CPD
 
+[![DOI](https://img.shields.io/badge/DOI-10.1016%2Fj.cad.2026.104104-blue)](https://doi.org/10.1016/j.cad.2026.104104)
+
 Official implementation of the paper:
 
 > **Sinkhorn-CPD: Robust Point Cloud Registration via Unbalanced Entropic Optimal Transport**
 >
 > Jin Zhang, Mingyang Zhao, Bing Liu, Xin Jiang
 >
-> Published in *Computer-Aided Design* (VSI: SPM 2026)
+> *Computer-Aided Design* (VSI: SPM 2026), article no. 104104. [doi:10.1016/j.cad.2026.104104](https://doi.org/10.1016/j.cad.2026.104104)
 
 <p align="center">
   <img src="assets/teaser.png" width="100%">
@@ -203,8 +205,10 @@ Pre-computed results are in `results/`. Below are key tables from the paper.
   title     = {Sinkhorn-CPD: Robust Point Cloud Registration via Unbalanced Entropic Optimal Transport},
   author    = {Zhang, Jin and Zhao, Mingyang and Liu, Bing and Jiang, Xin},
   journal   = {Computer-Aided Design},
+  pages     = {104104},
   year      = {2026},
-  note      = {VSI: SPM 2026},
+  publisher = {Elsevier},
+  doi       = {10.1016/j.cad.2026.104104},
 }
 ```
 
